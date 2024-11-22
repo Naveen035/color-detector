@@ -2,20 +2,24 @@ import streamlit as st
 import cv2
 import pandas as pd
 import numpy as np
+import pickle
 from PIL import Image
 
 # Set up the title and emojis
 st.title("🎨 Color Detector")
 st.write("👋 Upload an image and double-click anywhere to detect the color!")
 
-# Load the CSV file for color data
-csv_path = r"C:\Users\jayas\OneDrive\Desktop\New folder\Color_detector\colors.csv"
-columns = ["color", "color_name", "hex", "R", "G", "B"]
-try:
-    df = pd.read_csv(csv_path, names=columns, header=None)
-except FileNotFoundError:
-    st.error("Error: CSV file not found. Please check the path.")
-    st.stop()
+# Load the dataset and image from pickle files
+pickle_csv_path = r"C:\Users\jayas\OneDrive\Desktop\New folder\Color_detector\colors.pkl"
+pickle_image_path = r"C:\Users\jayas\OneDrive\Desktop\New folder\Color_detector\image.pkl"
+
+# Load the CSV dataset (color data)
+with open(pickle_csv_path, 'rb') as f:
+    df = pickle.load(f)
+
+# Load the image from pickle
+with open(pickle_image_path, 'rb') as f:
+    image = pickle.load(f)
 
 # Function to get the closest color name
 def get_color_name(R, G, B):
@@ -84,4 +88,3 @@ if uploaded_image is not None:
                 break
 
         cv2.destroyAllWindows()
-
