@@ -1,7 +1,3 @@
 pandas
 numpy
-sicket-learn
 opencv-python
-xgboost
-matplotlib
-seaborn
