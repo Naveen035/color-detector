@@ -2,24 +2,17 @@ import streamlit as st
 import cv2
 import pandas as pd
 import numpy as np
-import pickle
 from PIL import Image
+import requests
+from io import BytesIO
 
 # Set up the title and emojis
 st.title("🎨 Color Detector")
-st.write("👋 Upload an image and double-click anywhere to detect the color!")
+st.write("👋 Upload an image or use the default image to detect colors!")
 
-# Load the dataset and image from pickle files
-pickle_csv_path = "colors.pkl"
-pickle_image_path = "image.pkl"
-
-# Load the CSV dataset (color data)
-with open(pickle_csv_path, 'rb') as f:
-    df = pickle.load(f)
-
-# Load the image from pickle
-with open(pickle_image_path, 'rb') as f:
-    image = pickle.load(f)
+# Load the dataset (color data)
+colors_csv_path = "colors.csv"
+df = pd.read_csv(colors_csv_path)
 
 # Function to get the closest color name
 def get_color_name(R, G, B):
@@ -32,59 +25,45 @@ def get_color_name(R, G, B):
             color_name = df.loc[i, "color_name"]
     return color_name
 
+# Load a default image from URL
+default_image_url = "https://as1.ftcdn.net/v2/jpg/1000_F_755046480_4mLPbM6kq2BMGiRYk9LLvIO2qkajGn9H.jpg"
+response = requests.get(default_image_url)
+default_image = Image.open(BytesIO(response.content))
+default_image_array = np.array(default_image)
+
 # Upload an image
 uploaded_image = st.file_uploader("Upload an Image", type=["jpg", "png", "jpeg"])
 
+# Use the uploaded image or fallback to the default image
 if uploaded_image is not None:
-    # Read the uploaded image
     file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
     image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+else:
+    st.write("Using default image.")
+    image = cv2.cvtColor(default_image_array, cv2.COLOR_RGB2BGR)
 
-    # Convert BGR to RGB for Streamlit display
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+# Convert the image to RGB for display
+image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    # Display the uploaded image
-    st.image(image_rgb, caption="Uploaded Image", use_column_width=True)
+# Display the image
+st.image(image_rgb, caption="Click anywhere on the image to detect colors", use_column_width=True)
 
-    # Create an OpenCV window to select colors
-    st.write("💡 **Double-click anywhere on the image to detect the color!**")
+# Use Streamlit's `st.session_state` to store click coordinates
+if 'coords' not in st.session_state:
+    st.session_state['coords'] = None
 
-    if st.button("Detect Colors"):
-        # Variables to store the detected color
-        global clicked, xpos, ypos, b, g, r
-        clicked = False
-        b = g = r = xpos = ypos = 0
+# Detect colors upon click
+click = st.image(image_rgb, use_column_width=True, key="color_image")
 
-        # Mouse callback function
-        def draw_function(event, x, y, flags, param):
-            global clicked, xpos, ypos, b, g, r
-            if event == cv2.EVENT_LBUTTONDBLCLK:
-                clicked = True
-                xpos, ypos = x, y
-                b, g, r = image[y, x]
-                b, g, r = int(b), int(g), int(r)
+if click:
+    st.session_state['coords'] = click['x'], click['y']
 
-        # Set up OpenCV mouse callback
-        cv2.namedWindow("Color Detector")
-        cv2.setMouseCallback("Color Detector", draw_function)
+if st.session_state['coords']:
+    x, y = st.session_state['coords']
+    b, g, r = image[y, x]
+    color_name = get_color_name(r, g, b)
 
-        while True:
-            temp_image = image.copy()
-            if clicked:
-                # Draw rectangle and display color name
-                cv2.rectangle(temp_image, (18, 18), (750, 60), (b, g, r), -1)
-                color_name = get_color_name(r, g, b)
-                text = f"{color_name} | R={r}, G={g}, B={b}"
-                cv2.putText(temp_image, text, (50, 50), 2, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
-                if (r + g + b) >= 600:  # Adjust text color for bright backgrounds
-                    cv2.putText(temp_image, text, (50, 50), 2, 0.8, (0, 0, 0), 2, cv2.LINE_AA)
-                st.write(f"🎉 **Detected Color:** {color_name}")
-
-            # Display the updated image
-            cv2.imshow("Color Detector", temp_image)
-
-            # Exit on pressing ESC
-            if cv2.waitKey(20) & 0xFF == 27:
-                break
-
-        cv2.destroyAllWindows()
+    # Display the detected color details
+    st.write(f"🎉 **Detected Color:** {color_name}")
+    st.write(f"RGB Values: R={r}, G={g}, B={b}")
+    st.markdown(f"<div style='background-color:rgb({r},{g},{b});width:100px;height:50px;border:1px solid black'></div>", unsafe_allow_html=True)
