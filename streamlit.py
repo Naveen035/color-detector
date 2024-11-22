@@ -10,8 +10,8 @@ st.title("🎨 Color Detector")
 st.write("👋 Upload an image and double-click anywhere to detect the color!")
 
 # Load the dataset and image from pickle files
-pickle_csv_path = r"C:\Users\jayas\OneDrive\Desktop\New folder\Color_detector\colors.pkl"
-pickle_image_path = r"C:\Users\jayas\OneDrive\Desktop\New folder\Color_detector\image.pkl"
+pickle_csv_path = "colors.pkl"
+pickle_image_path = "image.pkl"
 
 # Load the CSV dataset (color data)
 with open(pickle_csv_path, 'rb') as f:
